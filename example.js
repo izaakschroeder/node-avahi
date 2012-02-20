@@ -1,7 +1,30 @@
 
-var Avahi = require('./avahi'), DBus = require('dbus');;
+var Avahi = require('./avahi'), DBus = require('dbus'), util = require('util');
 
 var client = DBus.system(Avahi.Namespace).object("/").as(Avahi.Server);
+
+function encodeTXTParameters(params) {
+	var out = [ ];
+	for (var key in params) {
+		var value = params[key], t = [ ];
+
+		for (var i = 0; i < key.length; ++i)
+			t.push(key.charCodeAt(i) & 0xFF);
+		t.push('='.charCodeAt(0));
+		for (var i = 0; i < value.length; ++i)
+			t.push(value.charCodeAt(i) & 0xFF);
+		out.push(t);
+	}
+	return out;
+}
+
+function decodeTXTParameters(txt) {
+	var params = { }
+	txt.map(function(t) { return t.map(function(i) { return String.fromCharCode(i); }).join("").split("=",2); }).forEach(function(item) {
+		params[item[0]] = item[1];
+	})
+	return params;
+}
 
 client.on("ready", function() {
 	
@@ -19,7 +42,10 @@ client.on("ready", function() {
 		group = group.as(Avahi.EntryGroup);
 
 		group.on("ready", function() {
-			group.addService(Avahi.IF_UNSPEC, Avahi.PROTO_INET, 0, "Hello World", "_test._tcp", "", "", 4444, [ "message=Hello" ], function(err) {
+
+			var params = {  message: "hello" };
+
+			group.addService(Avahi.IF_UNSPEC, Avahi.PROTO_INET, 0, "Hello World", "_test._tcp", "", "", 4444, encodeTXTParameters(params), function(err) {
 				group.commit(function() {
 
 				});
@@ -39,7 +65,7 @@ client.on("ready", function() {
 		}).on("itemNew", function(interface, protocol, name, type, domain, flags) {
 			console.log("Service found.");
 			client.resolveService(interface, protocol, name, type, domain, Avahi.PROTO_UNSPEC, 0, function(err, interface, protocol, name, type, domain, host, protocol, address, port, txt, flags) {
-				console.log("Connect to "+address+":"+port+" please.");
+				console.log("Connect to "+address+":"+port+" please ("+util.inspect(decodeTXTParameters(txt))+").");
 			})
 
 			
