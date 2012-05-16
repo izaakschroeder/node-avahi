@@ -1,33 +1,24 @@
 
-var Avahi = require('./avahi'), DBus = require('dbus'), util = require('util');
+var client = require('./avahi');
 
-var client = DBus.system(Avahi.Namespace).object("/").as(Avahi.Server);
 
-function encodeTXTParameters(params) {
-	var out = [ ];
-	for (var key in params) {
-		var value = params[key], t = [ ];
-
-		for (var i = 0; i < key.length; ++i)
-			t.push(key.charCodeAt(i) & 0xFF);
-		t.push('='.charCodeAt(0));
-		for (var i = 0; i < value.length; ++i)
-			t.push(value.charCodeAt(i) & 0xFF);
-		out.push(t);
-	}
-	return out;
-}
-
-function decodeTXTParameters(txt) {
-	var params = { }
-	txt.map(function(t) { return t.map(function(i) { return String.fromCharCode(i); }).join("").split("=",2); }).forEach(function(item) {
-		params[item[0]] = item[1];
-	})
-	return params;
-}
+client.publish("Hello World", "_test._tcp", 3333);
 
 client.on("ready", function() {
 	
+	client.browse("_ssh._tcp").on("discovery", function(node) {
+		node.resolve(function(err, address, port) {
+			if (err) {
+				console.log("Error resolving host.");
+				return;
+			}
+			console.log("SSH available on "+address+":"+port);
+		})
+	}).on("disappearance", function(node) {
+		console.log("gone");
+	})
+
+/*
 	client.getVersionString(function(err, version) {
 		console.log("You're running: "+version);
 	})
@@ -45,7 +36,7 @@ client.on("ready", function() {
 
 			var params = {  message: "hello" };
 
-			group.addService(Avahi.IF_UNSPEC, Avahi.PROTO_INET, 0, "Hello World", "_test._tcp", "", "", 4444, encodeTXTParameters(params), function(err) {
+			group.addService(Avahi.IF_UNSPEC, Avahi.PROTO_INET, 0, "Hello World", "_test._tcp", "", "", 4444, Avahi.encodeTXTParameters(params), function(err) {
 				group.commit(function() {
 
 				});
@@ -54,24 +45,23 @@ client.on("ready", function() {
 		
 	})
 
-	client.serviceBrowserNew(Avahi.IF_UNSPEC, Avahi.PROTO_UNSPEC, '_test._tcp', '', 0, function(err, browser) {
+	client.serviceTypeBrowserNew(Avahi.IF_UNSPEC, Avahi.PROTO_UNSPEC, '', 0, function(err, browser) {
+
+	//})
+
+	//client.serviceBrowserNew(Avahi.IF_UNSPEC, Avahi.PROTO_UNSPEC, '_test._tcp', '', 0, function(err, browser) {
 		
-		browser = browser.as(Avahi.ServiceBrowser);
+		browser = browser.as(Avahi.ServiceTypeBrowser);
 		
 		browser.on("allForNow", function() {
 			console.log("All for now");
 		}).on("failure", function() {
 			console.log("Failure");
 		}).on("itemNew", function(interface, protocol, name, type, domain, flags) {
-			console.log("Service found.");
-			client.resolveService(interface, protocol, name, type, domain, Avahi.PROTO_UNSPEC, 0, function(err, interface, protocol, name, type, domain, host, protocol, address, port, txt, flags) {
-				console.log("Connect to "+address+":"+port+" please ("+util.inspect(decodeTXTParameters(txt))+").");
-			})
-
-			
+			console.log("+ "+interface+" "+protocol+" "+name+" "+type+" "+domain+" "+flags);
 		}).on("itemRemove", function() {
 			console.log("Service disappeared.");
 		})
 	})
-
+*/
 })

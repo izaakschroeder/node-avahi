@@ -1,3 +1,9 @@
 {
-	"main": "avahi.js"
+	"name": "com.izaakschroeder.avahi",
+	"main": "avahi.js",
+	"version": "0.0.4",
+	"author": "Izaak Schroeder",
+	"dependencies": {
+		"com.izaakschroeder.dbus": ">=0.0.3"
+	}
 }
